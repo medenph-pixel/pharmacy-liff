@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>処方箋を送る | 薬局 森のおくすりやさん</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --green-dark: #085041;
+      --green-mid: #1D9E75;
+      --green-light: #E1F5EE;
+      --cream: #F5F0E8;
+      --text: #1a1a1a;
+      --text-sub: #666;
+    }
+
+    body {
+      font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', sans-serif;
+      background: var(--cream);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 0 40px;
+    }
+
+    /* Header */
+    .header {
+      width: 100%;
+      background: var(--green-dark);
+      padding: 20px 20px 24px;
+      text-align: center;
+      position: relative;
+    }
+    .header-emoji { font-size: 32px; margin-bottom: 8px; display: block; }
+    .header h1 {
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    .header p {
+      color: rgba(255,255,255,0.75);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    /* Main content */
+    .content {
+      width: 100%;
+      max-width: 480px;
+      padding: 24px 20px;
+    }
+
+    /* Step card */
+    .step-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+    .step-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--green-mid);
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+    }
+    .step-card h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .step-card p {
+      font-size: 13px;
+      color: var(--text-sub);
+      line-height: 1.6;
+    }
+
+    /* Camera button */
+    .btn-camera {
+      width: 100%;
+      background: var(--green-dark);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      padding: 18px;
+      font-size: 17px;
+      font-weight: 700;
+      font-family: inherit;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      transition: background 0.2s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-camera:active { background: #063830; transform: scale(0.98); }
+    .btn-camera .icon { font-size: 22px; }
+
+    .btn-album {
+      width: 100%;
+      background: #fff;
+      color: var(--green-dark);
+      border: 2px solid var(--green-dark);
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: inherit;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      transition: background 0.2s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-album:active { background: var(--green-light); transform: scale(0.98); }
+
+    /* Hidden file inputs */
+    #cameraInput { display: none; }
+    #albumInput { display: none; }
+
+    /* Preview area */
+    .preview-area {
+      display: none;
+      margin-bottom: 16px;
+    }
+    .preview-area.visible { display: block; }
+    .preview-label {
+      font-size: 12px;
+      color: var(--text-sub);
+      margin-bottom: 8px;
+    }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .preview-img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 2px solid var(--green-light);
+    }
+    .preview-count {
+      font-size: 13px;
+      color: var(--green-dark);
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    /* Info fields */
+    .info-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+    .info-card h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .field {
+      margin-bottom: 14px;
+    }
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--green-dark);
+      margin-bottom: 5px;
+      letter-spacing: 0.03em;
+    }
+    .field input, .field textarea {
+      width: 100%;
+      border: 1.5px solid #ddd;
+      border-radius: 10px;
+      padding: 11px 13px;
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--cream);
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    .field input:focus, .field textarea:focus {
+      outline: none;
+      border-color: var(--green-mid);
+      background: #fff;
+    }
+    .field textarea { resize: none; height: 70px; }
+    .field .optional {
+      font-size: 11px;
+      color: var(--text-sub);
+      font-weight: 400;
+      margin-left: 4px;
+    }
+
+    /* Submit button */
+    .btn-submit {
+      width: 100%;
+      background: var(--green-mid);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      padding: 18px;
+      font-size: 17px;
+      font-weight: 700;
+      font-family: inherit;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      margin-bottom: 8px;
+    }
+    .btn-submit:active { background: #158a63; transform: scale(0.98); }
+    .btn-submit:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Notice */
+    .notice {
+      background: var(--green-light);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 12px;
+      color: var(--green-dark);
+      line-height: 1.7;
+    }
+    .notice strong { font-weight: 700; }
+
+    /* Status message */
+    .status {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      font-size: 15px;
+      color: var(--green-dark);
+      font-weight: 700;
+    }
+    .status.visible { display: block; }
+
+    /* Loading */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .loading.visible { display: block; }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--green-light);
+      border-top-color: var(--green-dark);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Success screen */
+    .success {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .success.visible { display: block; }
+    .success-icon { font-size: 60px; margin-bottom: 16px; }
+    .success h2 { font-size: 20px; font-weight: 700; color: var(--green-dark); margin-bottom: 8px; }
+    .success p { font-size: 14px; color: var(--text-sub); line-height: 1.7; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <span class="header-emoji">💊</span>
+    <h1>処方箋を送る</h1>
+    <p>薬局 森のおくすりやさん</p>
+  </div>
+
+  <div class="content" id="mainContent">
+
+    <!-- STEP 1: 写真 -->
+    <div class="step-card">
+      <div class="step-label">STEP 1</div>
+      <h2>処方箋の写真を撮る</h2>
+      <p>ピントが合った状態で撮影してください。複数枚ある場合はまとめて選択できます。</p>
+    </div>
+
+    <button class="btn-camera" onclick="triggerCamera()">
+      <span class="icon">📷</span> カメラで今すぐ撮影
+    </button>
+    <button class="btn-album" onclick="triggerAlbum()">
+      <span class="icon">🖼️</span> アルバムから選ぶ
+    </button>
+
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" multiple onchange="handleImages(this)">
+    <input type="file" id="albumInput" accept="image/*" multiple onchange="handleImages(this)">
+
+    <!-- Preview -->
+    <div class="preview-area" id="previewArea">
+      <div class="preview-label">選択した写真</div>
+      <div class="preview-grid" id="previewGrid"></div>
+      <div class="preview-count" id="previewCount"></div>
+    </div>
+
+    <!-- STEP 2: 必要事項 -->
+    <div class="info-card">
+      <h3>📋 STEP 2 ／ 必要事項を入力</h3>
+
+      <div class="field">
+        <label>お名前 <span style="color:red">*</span></label>
+        <input type="text" id="name" placeholder="山田 花子" inputmode="text">
+      </div>
+
+      <div class="field">
+        <label>受け取り希望時間 <span style="color:red">*</span></label>
+        <input type="text" id="pickup" placeholder="例：15時ごろ、急ぎではない など" inputmode="text">
+      </div>
+
+      <div class="field">
+        <label>体重<span class="optional">（お子さまのみ）</span></label>
+        <input type="text" id="weight" placeholder="例：18kg" inputmode="decimal">
+      </div>
+
+      <div class="field">
+        <label>その他<span class="optional">（任意）</span></label>
+        <textarea id="note" placeholder="ジェネリック希望、一包化希望 など"></textarea>
+      </div>
+    </div>
+
+    <button class="btn-submit" id="submitBtn" onclick="submitAll()">
+      💊 処方箋を送信する
+    </button>
+
+    <div class="notice">
+      <strong>来局時のお持ち物</strong><br>
+      📄 処方箋の原本<br>
+      📗 お薬手帳<br>
+      🪪 マイナンバーカード<br>
+      🏥 医療証（必要な方）<br><br>
+      お薬の準備ができましたらLINEでご連絡します🌿
+    </div>
+
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loadingScreen">
+    <div class="spinner"></div>
+    <p style="color:var(--text-sub);font-size:14px;">送信中です...</p>
+  </div>
+
+  <!-- Success -->
+  <div class="success" id="successScreen">
+    <div class="success-icon">✅</div>
+    <h2>送信完了しました！</h2>
+    <p>処方箋を受け付けました。<br>お薬の準備ができましたら<br>LINEでご連絡します🌿<br><br>来局時に処方箋の原本・<br>お薬手帳をお持ちください。</p>
+  </div>
+
+  <script>
+    let selectedImages = [];
+    let liffReady = false;
+
+    // LIFF初期化
+    async function initLiff() {
+      try {
+        await liff.init({ liffId: 'YOUR_LIFF_ID' }); // ← あとで差し替え
+        liffReady = true;
+        if (!liff.isLoggedIn()) {
+          liff.login();
+        }
+      } catch (e) {
+        console.error('LIFF init error:', e);
+      }
+    }
+
+    initLiff();
+
+    function triggerCamera() {
+      document.getElementById('cameraInput').click();
+    }
+
+    function triggerAlbum() {
+      document.getElementById('albumInput').click();
+    }
+
+    function handleImages(input) {
+      const files = Array.from(input.files);
+      if (!files.length) return;
+
+      selectedImages = [...selectedImages, ...files];
+      renderPreview();
+    }
+
+    function renderPreview() {
+      const area = document.getElementById('previewArea');
+      const grid = document.getElementById('previewGrid');
+      const count = document.getElementById('previewCount');
+
+      grid.innerHTML = '';
+      selectedImages.forEach(file => {
+        const url = URL.createObjectURL(file);
+        const img = document.createElement('img');
+        img.src = url;
+        img.className = 'preview-img';
+        grid.appendChild(img);
+      });
+
+      count.textContent = `${selectedImages.length}枚選択中`;
+      area.classList.add('visible');
+    }
+
+    async function submitAll() {
+      const name = document.getElementById('name').value.trim();
+      const pickup = document.getElementById('pickup').value.trim();
+      const weight = document.getElementById('weight').value.trim();
+      const note = document.getElementById('note').value.trim();
+
+      if (!name) { alert('お名前を入力してください'); return; }
+      if (!pickup) { alert('受け取り希望時間を入力してください'); return; }
+      if (selectedImages.length === 0) { alert('処方箋の写真を選択してください'); return; }
+
+      // Show loading
+      document.getElementById('mainContent').style.display = 'none';
+      document.getElementById('loadingScreen').classList.add('visible');
+
+      try {
+        // テキストメッセージ送信
+        let message = `📋 処方箋の送信\n\n`;
+        message += `お名前：${name}\n`;
+        message += `受け取り希望時間：${pickup}\n`;
+        if (weight) message += `体重：${weight}\n`;
+        if (note) message += `その他：${note}\n`;
+
+        // 画像を順番に送信
+        for (let i = 0; i < selectedImages.length; i++) {
+          const file = selectedImages[i];
+          const base64 = await fileToBase64(file);
+
+          await liff.sendMessages([{
+            type: 'image',
+            originalContentUrl: base64,
+            previewImageUrl: base64
+          }]);
+        }
+
+        // テキスト送信
+        await liff.sendMessages([{
+          type: 'text',
+          text: message
+        }]);
+
+        // Success
+        document.getElementById('loadingScreen').classList.remove('visible');
+        document.getElementById('successScreen').classList.add('visible');
+
+      } catch (e) {
+        console.error(e);
+        document.getElementById('loadingScreen').classList.remove('visible');
+        document.getElementById('mainContent').style.display = 'block';
+        alert('送信に失敗しました。もう一度お試しください。');
+      }
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+  </script>
+
+</body>
+</html>
